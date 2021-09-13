@@ -6,7 +6,7 @@ module.exports = function(ctx) {
 
   var fs = require('fs'),
     path = require('path'),
-    UglifyJS = require('uglify-js'),
+    Terser = require('terser'),
     CleanCSS = require('clean-css'),
     ngAnnotate = require('ng-annotate'),
     rootDir = ctx.opts.projectRoot,
@@ -25,7 +25,7 @@ module.exports = function(ctx) {
    * @param  {string} file - File path
    * @return {undefined}
    */
-  function compress(file) {
+   async function compress(file) {
     var ext = path.extname(file),
       res,
       source,
@@ -38,8 +38,12 @@ module.exports = function(ctx) {
         res = ngAnnotate(String(fs.readFileSync(file, 'utf8')), {
           add: true,
         });
-        result = UglifyJS.minify(res.src, hookConfig.uglifyJsOptions);
-        fs.writeFileSync(file, result.code, 'utf8'); // overwrite the original unminified file
+        result = await Terser.minify(res.src, hookConfig.uglifyJsOptions);
+        if (result){
+          fs.writeFileSync(file, result.code, 'utf8'); // overwrite the original unminified file
+        }else{
+          console.log('Terser minify result null, file not modified: ' + file);
+        }
         break;
 
       case '.css':
