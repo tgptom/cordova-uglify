@@ -24,7 +24,7 @@
   "readmeFilename": "README.md",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tgptom/cordova-uglify"
+    "url": "git+https://github.com/tgptom/cordova-uglify.git"
   },
   "scripts": {
     "postinstall": "node scripts/install.js",
