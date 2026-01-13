@@ -8,7 +8,7 @@ module.exports = function(ctx) {
     path = require('path'),
     Terser = require('terser'),
     CleanCSS = require('clean-css'),
-    ngAnnotate = require('ng-annotate'),
+    ngAnnotate = require('ng-annotate-patched'),
     rootDir = ctx.opts.projectRoot,
     platformPath = path.join(rootDir, 'platforms'),
     platforms = ctx.opts.cordova.platforms,
@@ -38,11 +38,15 @@ module.exports = function(ctx) {
         res = ngAnnotate(String(fs.readFileSync(file, 'utf8')), {
           add: true,
         });
-        result = await Terser.minify(res.src, hookConfig.uglifyJsOptions);
-        if (result){
-          fs.writeFileSync(file, result.code, 'utf8'); // overwrite the original unminified file
-        }else{
-          console.log('Terser minify result null, file not modified: ' + file);
+        if (res && res.src != null) {
+          result = await Terser.minify(res.src, hookConfig.uglifyJsOptions);
+          if (result){
+            fs.writeFileSync(file, result.code, 'utf8'); // overwrite the original unminified file
+          }else{
+            console.log('Terser minify result null, file not modified: ' + file);
+          }
+        }else{  
+          console.log('File source empty, not modified: ' + file);
         }
         break;
 
@@ -78,6 +82,9 @@ module.exports = function(ctx) {
 
         fs.stat(file, function(err, stat) {
           if (stat.isFile()) {
+            if (file.endsWith('.min.js')) {
+              return;
+            }
             compress(file);
             return;
           }
