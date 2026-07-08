@@ -26,18 +26,11 @@
 var fs = require('fs-extra');
 var path = require('path');
 var xml2js = require('xml2js');
+var utils = require('./utils');
 
 // __dirname = $(project)/node_modules/cordova-uglify/scripts
 var packageRoot = path.resolve(__dirname, '..');
-
-// Prefer INIT_CWD (the directory where npm was invoked) when it contains config.xml,
-// otherwise fall back to walking two levels up from the package root.
-var projectRoot;
-if (process.env.INIT_CWD && fs.existsSync(path.join(process.env.INIT_CWD, 'config.xml'))) {
-  projectRoot = process.env.INIT_CWD;
-} else {
-  projectRoot = path.resolve(packageRoot, '..', '..');
-}
+var projectRoot = utils.resolveProjectRoot(packageRoot);
 
 var hooksDir = path.join(projectRoot, 'hooks');
 var afterPrepareDir = path.join(hooksDir, 'after_prepare');
@@ -68,10 +61,7 @@ parser.parseString(configFileData, function(err, result) {
   }
 
   // Normalize hook to an array (xml2js may produce an object for a single entry)
-  var hooks = result.widget.hook || [];
-  if (!Array.isArray(hooks)) {
-    hooks = [hooks];
-  }
+  var hooks = utils.normalizeHooks(result.widget.hook);
 
   // Only add the hook entry if it does not already exist
   var alreadyExists = hooks.some(function(node) {
