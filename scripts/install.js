@@ -25,7 +25,7 @@
 //              /after_prepare
 //                  uglify.js
 
-var fs = require('fs');
+var fs = require('fs-extra');
 var path = require('path');
 var xml2js = require('xml2js');
 var cwd = process.cwd(); // $(project)/node_modules/cordova-uglify

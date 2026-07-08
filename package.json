@@ -11,9 +11,10 @@
     "hooks"
   ],
   "dependencies": {
+    "fs-extra": "11.3.6",
     "clean-css": "5.3.3",
     "ng-annotate-patched": "1.15.0",
-    "terser": "5.44.1",
+    "terser": "5.48.0",
     "xml2js": "0.6.2"
   },
   "author": "tgptom",

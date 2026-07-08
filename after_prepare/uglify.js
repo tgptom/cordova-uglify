@@ -4,7 +4,7 @@
 module.exports = function(ctx) {
   'use strict';
 
-  var fs = require('fs'),
+  var fs = require('fs-extra'),
     path = require('path'),
     Terser = require('terser'),
     CleanCSS = require('clean-css'),

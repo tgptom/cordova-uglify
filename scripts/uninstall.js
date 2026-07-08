@@ -2,7 +2,7 @@
 
 //After uninstall script to remove the uglify.js script from the users hooks/after_prepare directory
 
-var fs = require('fs');
+var fs = require('fs-extra');
 var path = require('path');
 var xml2js = require('xml2js');
 var cwd = process.cwd(); // $(project)/node_modules/cordova-uglify
