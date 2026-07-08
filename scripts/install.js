@@ -43,6 +43,10 @@ for (var i = 0; i < dirs.length; i++) {
   }
 }
 
+// packageRoot = $(project)/node_modules/cordova-uglify
+// Source files shipped inside this package:
+//   packageRoot/after_prepare/uglify.js
+//   packageRoot/uglify-config.json
 var uglifyScriptPath = path.join(packageRoot, 'after_prepare', 'uglify.js');
 var uglifyAfterPreparePath = path.join(afterPrepareDir, 'uglify.js');
 fs.copyFileSync(uglifyScriptPath, uglifyAfterPreparePath);
