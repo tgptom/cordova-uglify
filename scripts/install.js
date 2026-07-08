@@ -52,10 +52,10 @@ for (var i = 0; i < dirs.length; i++) {
 
 var uglifyScriptPath = path.join(packageRoot, 'after_prepare', 'uglify.js');
 var uglifyAfterPreparePath = path.join(afterPrepareDir, 'uglify.js');
-fs.writeFileSync(uglifyAfterPreparePath, fs.readFileSync(uglifyScriptPath));
+fs.copyFileSync(uglifyScriptPath, uglifyAfterPreparePath);
 
-var uglifyConfigFile = fs.readFileSync(path.join(packageRoot, 'uglify-config.json'));
-fs.writeFileSync(path.join(hooksDir, 'uglify-config.json'), uglifyConfigFile);
+var uglifyConfigFile = path.join(packageRoot, 'uglify-config.json');
+fs.copyFileSync(uglifyConfigFile, path.join(hooksDir, 'uglify-config.json'));
 
 var configFilePath = path.join(projectRoot, 'config.xml');
 var configFileData = fs.readFileSync(configFilePath);
@@ -75,7 +75,9 @@ parser.parseString(configFileData, function(err, result) {
 
   // Only add the hook entry if it does not already exist
   var alreadyExists = hooks.some(function(node) {
-    return node && node.$ && node.$.src === 'hooks/after_prepare/uglify.js';
+    return node && node.$ &&
+      node.$.src === 'hooks/after_prepare/uglify.js' &&
+      node.$.type === 'after_prepare';
   });
 
   if (alreadyExists) {

@@ -33,41 +33,42 @@ if (fs.existsSync(configFilePath)) {
 
 var cordovaConfigFilePath = path.join(projectRoot, 'config.xml');
 
-if (!fs.existsSync(cordovaConfigFilePath)) {
-  return;
-}
-
-var cordovaConfigFileData = fs.readFileSync(cordovaConfigFilePath);
-
-if (cordovaConfigFileData.indexOf('hooks/after_prepare/uglify.js') === -1) {
-  return;
-}
-
-var parser = new xml2js.Parser();
-parser.parseString(cordovaConfigFileData, function(err, result) {
-  if (err) {
-    console.log(err);
+function updateCordovaConfig() {
+  if (!fs.existsSync(cordovaConfigFilePath)) {
     return;
   }
 
-  // Normalize hook to an array (xml2js may produce an object for a single entry)
-  var hooks = result.widget.hook || [];
-  if (!Array.isArray(hooks)) {
-    hooks = [hooks];
+  var cordovaConfigFileData = fs.readFileSync(cordovaConfigFilePath);
+
+  if (cordovaConfigFileData.indexOf('hooks/after_prepare/uglify.js') === -1) {
+    return;
   }
 
-  var indexToDelete = -1;
-  hooks.forEach(function(node, i) {
-    if (node && node.$ && node.$.src === 'hooks/after_prepare/uglify.js') {
-      indexToDelete = i;
+  var parser = new xml2js.Parser();
+  parser.parseString(cordovaConfigFileData, function(err, result) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    // Normalize hook to an array (xml2js may produce an object for a single entry)
+    var hooks = result.widget.hook || [];
+    if (!Array.isArray(hooks)) {
+      hooks = [hooks];
+    }
+
+    var indexToDelete = hooks.findIndex(function(node) {
+      return node && node.$ && node.$.src === 'hooks/after_prepare/uglify.js';
+    });
+
+    if (indexToDelete !== -1) {
+      hooks.splice(indexToDelete, 1);
+      result.widget.hook = hooks;
+      var builder = new xml2js.Builder();
+      var xml = builder.buildObject(result);
+      fs.writeFileSync(cordovaConfigFilePath, xml);
     }
   });
+}
 
-  if (indexToDelete > -1) {
-    hooks.splice(indexToDelete, 1);
-    result.widget.hook = hooks;
-    var builder = new xml2js.Builder();
-    var xml = builder.buildObject(result);
-    fs.writeFileSync(cordovaConfigFilePath, xml);
-  }
-});
+updateCordovaConfig();
