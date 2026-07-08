@@ -105,7 +105,12 @@ module.exports = function(ctx) {
    */
   function processFolders(wwwPath) {
     foldersToProcess.forEach(function(folder) {
-      processFiles(path.join(wwwPath, folder));
+      var folderPath = path.join(wwwPath, folder);
+      if (!fs.existsSync(folderPath)) {
+        console.log('Skipping missing folder: ' + folderPath);
+        return;
+      }
+      processFiles(folderPath);
     });
   }
 
@@ -144,6 +149,11 @@ module.exports = function(ctx) {
           'this hook only supports android, ios, wp8, windows, and browser currently'
         );
         return;
+    }
+
+    if (!fs.existsSync(wwwPath)) {
+      console.log('Skipping platform ' + platform + ': www path does not exist: ' + wwwPath);
+      return;
     }
 
     processFolders(wwwPath);

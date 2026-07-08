@@ -5,23 +5,38 @@
 var fs = require('fs-extra');
 var path = require('path');
 var xml2js = require('xml2js');
-var cwd = process.cwd(); // $(project)/node_modules/cordova-uglify
 
-var uglifyJsPath = path.join(
-  cwd,
-  '../../',
-  'hooks',
-  'after_prepare',
-  'uglify.js'
-);
-var configFilePath = path.join(cwd, '../../', 'hooks', 'uglify-config.json');
+// __dirname = $(project)/node_modules/cordova-uglify/scripts
+var packageRoot = path.resolve(__dirname, '..');
 
-fs.unlinkSync(uglifyJsPath);
-fs.unlinkSync(configFilePath);
+// Prefer INIT_CWD (the directory where npm was invoked) when it contains config.xml,
+// otherwise fall back to walking two levels up from the package root.
+var projectRoot;
+if (process.env.INIT_CWD && fs.existsSync(path.join(process.env.INIT_CWD, 'config.xml'))) {
+  projectRoot = process.env.INIT_CWD;
+} else {
+  projectRoot = path.resolve(packageRoot, '..', '..');
+}
 
-console.log('removed ' + uglifyJsPath + ' and ' + configFilePath);
+var uglifyJsPath = path.join(projectRoot, 'hooks', 'after_prepare', 'uglify.js');
+var configFilePath = path.join(projectRoot, 'hooks', 'uglify-config.json');
 
-var cordovaConfigFilePath = path.join(cwd, '../../', 'config.xml'); // top-level config.xml
+if (fs.existsSync(uglifyJsPath)) {
+  fs.unlinkSync(uglifyJsPath);
+  console.log('removed ' + uglifyJsPath);
+}
+
+if (fs.existsSync(configFilePath)) {
+  fs.unlinkSync(configFilePath);
+  console.log('removed ' + configFilePath);
+}
+
+var cordovaConfigFilePath = path.join(projectRoot, 'config.xml');
+
+if (!fs.existsSync(cordovaConfigFilePath)) {
+  return;
+}
+
 var cordovaConfigFileData = fs.readFileSync(cordovaConfigFilePath);
 
 if (cordovaConfigFileData.indexOf('hooks/after_prepare/uglify.js') === -1) {
@@ -35,18 +50,24 @@ parser.parseString(cordovaConfigFileData, function(err, result) {
     return;
   }
 
-  var indexToDelete;
-  result.widget.hook.forEach(function(node, i) {
-    if (node.$.src === 'hooks/after_prepare/uglify.js') {
+  // Normalize hook to an array (xml2js may produce an object for a single entry)
+  var hooks = result.widget.hook || [];
+  if (!Array.isArray(hooks)) {
+    hooks = [hooks];
+  }
+
+  var indexToDelete = -1;
+  hooks.forEach(function(node, i) {
+    if (node && node.$ && node.$.src === 'hooks/after_prepare/uglify.js') {
       indexToDelete = i;
     }
   });
 
   if (indexToDelete > -1) {
-    result.widget.hook.splice(indexToDelete, 1);
+    hooks.splice(indexToDelete, 1);
+    result.widget.hook = hooks;
     var builder = new xml2js.Builder();
     var xml = builder.buildObject(result);
-
     fs.writeFileSync(cordovaConfigFilePath, xml);
   }
 });
