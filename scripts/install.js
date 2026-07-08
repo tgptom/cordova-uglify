@@ -2,8 +2,6 @@
 
 //After install script - installs the cordova hook into hooks/after_prepare directory
 
-//We assume after post install, this script is run from its root directory
-
 //Before
 // ./proj
 //      /hooks
@@ -28,41 +26,36 @@
 var fs = require('fs-extra');
 var path = require('path');
 var xml2js = require('xml2js');
-var cwd = process.cwd(); // $(project)/node_modules/cordova-uglify
+var utils = require('./utils');
+
 // __dirname = $(project)/node_modules/cordova-uglify/scripts
+var packageRoot = path.resolve(__dirname, '..');
+var projectRoot = utils.resolveProjectRoot(packageRoot);
 
-var paths = [
-  path.join(cwd, '../../hooks'),
-  path.join(cwd, '../../hooks/after_prepare'),
-];
+var hooksDir = path.join(projectRoot, 'hooks');
+var afterPrepareDir = path.join(hooksDir, 'after_prepare');
 
-for (var pathIndex in paths) {
-  if (!fs.existsSync(paths[pathIndex])) {
-    console.log('Creating directory: ', paths[pathIndex]);
-    fs.mkdirSync(paths[pathIndex]);
+var dirs = [hooksDir, afterPrepareDir];
+for (var i = 0; i < dirs.length; i++) {
+  if (!fs.existsSync(dirs[i])) {
+    console.log('Creating directory: ', dirs[i]);
+    fs.mkdirSync(dirs[i]);
   }
 }
 
-var uglifyScriptPath = path.join(cwd, 'after_prepare', 'uglify.js');
+// packageRoot = $(project)/node_modules/cordova-uglify
+// Source files shipped inside this package:
+//   packageRoot/after_prepare/uglify.js
+//   packageRoot/uglify-config.json
+var uglifyScriptPath = path.join(packageRoot, 'after_prepare', 'uglify.js');
+var uglifyAfterPreparePath = path.join(afterPrepareDir, 'uglify.js');
+fs.copyFileSync(uglifyScriptPath, uglifyAfterPreparePath);
 
-var uglifyFile = fs.readFileSync(uglifyScriptPath);
-//console.log('uglifyFile: ', uglifyFile);
-var uglifyAfterPreparePath = path.join(paths[1], 'uglify.js');
+var uglifyConfigFile = path.join(packageRoot, 'uglify-config.json');
+fs.copyFileSync(uglifyConfigFile, path.join(hooksDir, 'uglify-config.json'));
 
-//console.log('Creating uglify hook: ', uglifyAfterPreparePath);
-fs.writeFileSync(uglifyAfterPreparePath, uglifyFile);
-
-var uglifyConfigFile = fs.readFileSync(
-  path.join(__dirname, '../uglify-config.json')
-);
-fs.writeFileSync(path.join(paths[0], 'uglify-config.json'), uglifyConfigFile);
-
-var configFilePath = path.join(cwd, '../../', 'config.xml'); // top-level config.xml
+var configFilePath = path.join(projectRoot, 'config.xml');
 var configFileData = fs.readFileSync(configFilePath);
-
-if (configFileData.indexOf('hooks/after_prepare/uglify.js') > -1) {
-  return;
-}
 
 var parser = new xml2js.Parser();
 parser.parseString(configFileData, function(err, result) {
@@ -71,20 +64,29 @@ parser.parseString(configFileData, function(err, result) {
     return;
   }
 
-  var builder = new xml2js.Builder();
-  var treeObj = {
-    ...result,
-    widget: {
-      ...result.widget,
-      hook: {
-        $: {
-          src: 'hooks/after_prepare/uglify.js',
-          type: 'after_prepare',
-        },
-      },
-    },
-  };
-  var xml = builder.buildObject(treeObj);
+  // Normalize hook to an array (xml2js may produce an object for a single entry)
+  var hooks = utils.normalizeHooks(result.widget.hook);
 
+  // Only add the hook entry if it does not already exist
+  var alreadyExists = hooks.some(function(node) {
+    return node && node.$ &&
+      node.$.src === 'hooks/after_prepare/uglify.js' &&
+      node.$.type === 'after_prepare';
+  });
+
+  if (alreadyExists) {
+    return;
+  }
+
+  hooks.push({
+    $: {
+      src: 'hooks/after_prepare/uglify.js',
+      type: 'after_prepare',
+    },
+  });
+  result.widget.hook = hooks;
+
+  var builder = new xml2js.Builder();
+  var xml = builder.buildObject(result);
   fs.writeFileSync(configFilePath, xml);
 });
